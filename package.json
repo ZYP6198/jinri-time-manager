@@ -1,7 +1,7 @@
 {
   "name": "jinri-time-manager",
   "productName": "今日",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "一个把计划时间、实际专注和每日复盘放在一起的个人时间管理软件。",
   "main": "electron-main.js",
   "author": {
