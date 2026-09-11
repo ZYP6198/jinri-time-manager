@@ -53,10 +53,7 @@
     },
     "linux": {
       "target": ["AppImage", "deb"],
-      "category": "Utility",
-      "desktop": {
-        "Name": "今日"
-      }
+      "category": "Utility"
     }
   }
 }
