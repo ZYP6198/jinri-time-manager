@@ -1,0 +1,20 @@
+{
+  "name": "今日 · 个人时间管理",
+  "short_name": "今日",
+  "description": "把计划时间、实际专注和每日复盘放在一起。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f8fb",
+  "theme_color": "#f7f8fb",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

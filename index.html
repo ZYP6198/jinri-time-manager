@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7f8fb" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="今日" />
+    <title>今日 · 个人时间管理</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div>
+          <div class="brand-lockup">
+            <div class="brand-mark">今</div>
+            <div>
+              <div class="brand-name">今日</div>
+              <div class="brand-tagline">把时间用在重要的事上</div>
+            </div>
+          </div>
+
+          <div class="side-date-card">
+            <div class="side-date-kicker">今日是</div>
+            <div class="side-date" id="side-date">—</div>
+            <div class="side-date-week" id="side-date-week">—</div>
+          </div>
+
+          <nav class="main-nav" aria-label="主导航">
+            <button class="nav-item active" data-view="today">
+              <span class="nav-icon">⌂</span><span>今日</span>
+            </button>
+            <button class="nav-item" data-view="calendar">
+              <span class="nav-icon">□</span><span>日历</span>
+            </button>
+            <button class="nav-item" data-view="stats">
+              <span class="nav-icon">◒</span><span>统计</span>
+            </button>
+            <button class="nav-item" data-view="profile">
+              <span class="nav-icon">◉</span><span>我的</span>
+            </button>
+          </nav>
+        </div>
+
+        <div class="sidebar-bottom">
+          <div class="focus-card">
+            <div class="focus-card-icon">✦</div>
+            <div>
+              <div class="focus-card-title">专注于当下</div>
+              <div class="focus-card-copy">一次只做一件重要的事</div>
+            </div>
+          </div>
+          <div class="user-mini">
+            <div class="avatar">Y</div>
+            <div class="user-mini-copy">
+              <strong>我的一天</strong>
+              <span>本地空间</span>
+            </div>
+            <button class="icon-button subtle" id="open-profile" aria-label="打开我的页面">•••</button>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <div class="eyebrow" id="topbar-date">—</div>
+            <h1 id="page-title">今天，也要有一点进展。</h1>
+          </div>
+          <div class="topbar-actions">
+            <div class="active-timer-pill hidden" id="active-timer-pill">
+              <span class="live-dot"></span>
+              <span id="active-timer-label">正在专注</span>
+              <strong id="active-timer-value">00:00:00</strong>
+            </div>
+            <button class="button button-primary" id="open-add-task">
+              <span class="button-plus">＋</span> 新建任务
+            </button>
+          </div>
+        </header>
+
+        <section class="view active" id="view-today">
+          <div class="today-hero">
+            <div class="hero-copy">
+              <div class="hero-kicker"><span class="sparkle">✦</span> 今日计划</div>
+              <h2>先完成最重要的，<br /><em>剩下的交给时间。</em></h2>
+              <p id="hero-copy">你已经迈出了第一步，保持这个节奏。</p>
+            </div>
+            <div class="hero-progress-wrap">
+              <div class="hero-progress-ring" id="hero-progress-ring">
+                <div class="ring-center"><strong id="hero-progress">0%</strong><span>完成率</span></div>
+              </div>
+              <div class="hero-progress-caption"><strong id="hero-progress-count">0 / 0</strong><span>项任务已完成</span></div>
+            </div>
+          </div>
+
+          <div class="metric-grid" id="today-metrics"></div>
+
+          <div class="content-grid today-grid">
+            <section class="panel top3-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="section-label">FOCUS LIST</span>
+                  <h3>今日 Top 3</h3>
+                </div>
+                <span class="panel-count" id="top3-count">0 / 3</span>
+              </div>
+              <div class="top3-list" id="top3-list"></div>
+              <button class="text-button" id="set-top3">＋ 把任务加入 Top 3</button>
+            </section>
+
+            <section class="panel insight-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="section-label">A LITTLE INSIGHT</span>
+                  <h3>今日提示</h3>
+                </div>
+                <span class="insight-sun">☼</span>
+              </div>
+              <div class="insight-body">
+                <div class="insight-quote">“</div>
+                <p id="insight-copy">把计划写下来，执行就有了方向。</p>
+              </div>
+              <div class="insight-footer"><span class="insight-line"></span><span>来自你的时间记录</span></div>
+            </section>
+          </div>
+
+          <section class="panel tasks-panel">
+            <div class="panel-heading tasks-heading">
+              <div>
+                <span class="section-label">YOUR DAY</span>
+                <h3>今日任务 <span class="heading-count" id="task-count">0</span></h3>
+              </div>
+              <div class="task-heading-actions">
+                <div class="filter-tabs" id="task-filters">
+                  <button class="filter-tab active" data-filter="all">全部</button>
+                  <button class="filter-tab" data-filter="todo">待开始</button>
+                  <button class="filter-tab" data-filter="running">进行中</button>
+                  <button class="filter-tab" data-filter="done">已完成</button>
+                </div>
+              </div>
+            </div>
+            <div class="quick-add">
+              <span class="quick-add-icon">＋</span>
+              <input id="quick-add-input" type="text" placeholder="快速添加任务，回车即可创建" autocomplete="off" />
+              <span class="quick-add-hint">Enter</span>
+            </div>
+            <div class="task-list" id="task-list"></div>
+            <div class="empty-state hidden" id="empty-tasks">
+              <div class="empty-icon">☼</div>
+              <strong>今天还没有任务</strong>
+              <span>把想做的事写下来，给它一个时间。</span>
+              <button class="button button-soft" id="empty-add-task">＋ 新建第一项</button>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="view-calendar">
+          <div class="view-intro">
+            <div><span class="section-label">LOOK BACK</span><h2>回看你的每一天。</h2><p>完成率不是评判，是认识自己的线索。</p></div>
+            <div class="calendar-legend"><span><i class="legend-dot high"></i>完成率高</span><span><i class="legend-dot low"></i>有记录</span></div>
+          </div>
+          <div class="content-grid calendar-grid">
+            <section class="panel calendar-panel">
+              <div class="calendar-toolbar">
+                <button class="icon-button" id="prev-month" aria-label="上个月">‹</button>
+                <h3 id="calendar-month">—</h3>
+                <button class="icon-button" id="next-month" aria-label="下个月">›</button>
+                <button class="button button-small button-soft" id="calendar-today">回到今天</button>
+              </div>
+              <div class="weekday-row"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+              <div class="calendar-days" id="calendar-days"></div>
+            </section>
+            <section class="panel day-detail-panel" id="day-detail-panel"></section>
+          </div>
+        </section>
+
+        <section class="view" id="view-stats">
+          <div class="view-intro stats-intro">
+            <div><span class="section-label">TIME REPORT</span><h2>时间，留下了答案。</h2><p>看看计划和现实之间，发生了什么。</p></div>
+            <div class="period-tabs" id="period-tabs"><button class="period-tab active" data-period="today">今日</button><button class="period-tab" data-period="week">本周</button><button class="period-tab" data-period="month">本月</button></div>
+          </div>
+          <div class="metric-grid stats-metrics" id="stats-metrics"></div>
+          <div class="content-grid stats-grid">
+            <section class="panel chart-panel">
+              <div class="panel-heading"><div><span class="section-label">FOCUS HOURS</span><h3 id="chart-title">最近 7 天专注时间</h3></div><span class="chart-total" id="chart-total">0h</span></div>
+              <div class="bar-chart" id="bar-chart"></div>
+            </section>
+            <section class="panel category-panel">
+              <div class="panel-heading"><div><span class="section-label">BY CATEGORY</span><h3>时间花在哪里</h3></div><span class="category-total" id="category-total">0h</span></div>
+              <div class="category-donut-row"><div class="category-donut" id="category-donut"><div><strong id="donut-hours">0h</strong><span>专注</span></div></div><div class="category-legend" id="category-legend"></div></div>
+            </section>
+          </div>
+          <section class="panel variance-panel">
+            <div class="panel-heading"><div><span class="section-label">PLAN VS REALITY</span><h3>计划与实际</h3></div><span class="variance-help">实际 − 计划</span></div>
+            <div class="variance-list" id="variance-list"></div>
+          </section>
+        </section>
+
+        <section class="view" id="view-profile">
+          <div class="view-intro"><div><span class="section-label">YOUR SPACE</span><h2>这是你的时间空间。</h2><p>把工具调成适合你的样子。</p></div></div>
+          <div class="content-grid profile-grid">
+            <section class="panel profile-card">
+              <div class="profile-identity"><div class="avatar avatar-large">Y</div><div><h3>我的一天</h3><p>本地空间 · 数据只保存在这台设备</p></div><span class="profile-badge">V1.0</span></div>
+              <div class="profile-divider"></div>
+              <div class="settings-list">
+                <button class="setting-row" id="install-app"><span class="setting-icon">＋</span><span><strong>安装到手机</strong><small>添加到主屏幕，像 App 一样使用</small></span><span class="setting-arrow">›</span></button>
+                <button class="setting-row" id="export-data"><span class="setting-icon">↥</span><span><strong>导出数据</strong><small>将任务和统计保存为 JSON</small></span><span class="setting-arrow">›</span></button>
+                <button class="setting-row" id="reset-data"><span class="setting-icon warning">↻</span><span><strong>重置演示数据</strong><small>清空当前记录并恢复示例</small></span><span class="setting-arrow">›</span></button>
+              </div>
+            </section>
+            <section class="panel review-panel">
+              <div class="panel-heading"><div><span class="section-label">DAILY REVIEW</span><h3>写下今天</h3></div><span class="review-date" id="review-date">—</span></div>
+              <label class="field-label">今天完成得最好的一件事<textarea id="review-good" rows="2" placeholder="哪一个瞬间让你觉得今天没有白过？"></textarea></label>
+              <label class="field-label">今天最大的时间浪费<textarea id="review-waste" rows="2" placeholder="诚实记录，不用责备自己"></textarea></label>
+              <div class="review-score-row"><div><span class="field-label">给今天打个分</span><small>明天会更清楚从哪里开始</small></div><div class="score-picker" id="score-picker"></div></div>
+              <button class="button button-primary full-width" id="save-review">保存今日复盘</button>
+            </section>
+          </div>
+          <section class="panel categories-panel"><div class="panel-heading"><div><span class="section-label">CATEGORIES</span><h3>任务分类</h3></div><button class="text-button" id="add-category">＋ 新增分类</button></div><div class="category-chips" id="category-chips"></div></section>
+        </section>
+      </main>
+    </div>
+
+    <div class="mobile-nav" aria-label="底部导航">
+      <button class="nav-item active" data-view="today"><span class="nav-icon">⌂</span><span>今日</span></button>
+      <button class="nav-item" data-view="calendar"><span class="nav-icon">□</span><span>日历</span></button>
+      <button class="nav-item" data-view="stats"><span class="nav-icon">◒</span><span>统计</span></button>
+      <button class="nav-item" data-view="profile"><span class="nav-icon">◉</span><span>我的</span></button>
+    </div>
+
+    <div class="modal-backdrop hidden" id="modal-backdrop"></div>
+    <section class="modal task-modal hidden" id="task-modal" role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
+      <div class="modal-header"><div><span class="section-label">TASK DETAILS</span><h2 id="task-modal-title">新建任务</h2></div><button class="icon-button" data-close-modal aria-label="关闭">×</button></div>
+      <form id="task-form">
+        <input type="hidden" id="task-id" />
+        <label class="field-label">任务名称 <span class="required">*</span><input id="task-title" required type="text" placeholder="例如：阅读论文第三章" /></label>
+        <div class="field-row"><label class="field-label">分类<select id="task-category"></select></label><label class="field-label">优先级<select id="task-priority"><option value="P1">P1 · 重要</option><option value="P2">P2 · 较重要</option><option value="P3" selected>P3 · 普通</option><option value="P4">P4 · 较低</option></select></label></div>
+        <label class="field-label">计划日期<input id="task-date" required type="date" /></label>
+        <div class="field-row"><label class="field-label">开始时间<input id="task-start" type="time" /></label><label class="field-label">结束时间<input id="task-end" type="time" /></label></div>
+        <div class="duration-preview" id="duration-preview">计划时长 <strong>—</strong></div>
+        <label class="field-label">备注<textarea id="task-note" rows="3" placeholder="给未来的自己留一句话"></textarea></label>
+        <label class="checkbox-label"><input id="task-top3" type="checkbox" /><span class="fake-checkbox"></span><span>加入今日 Top 3</span></label>
+        <div class="modal-actions"><button type="button" class="button button-soft" data-close-modal>取消</button><button type="submit" class="button button-primary" id="task-submit">保存任务</button></div>
+      </form>
+    </section>
+
+    <section class="modal detail-modal hidden" id="detail-modal" role="dialog" aria-modal="true" aria-labelledby="detail-title"></section>
+    <div class="toast hidden" id="toast"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
