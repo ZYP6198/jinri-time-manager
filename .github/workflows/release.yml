@@ -1,5 +1,4 @@
 name: Build desktop releases
-
 on:
   workflow_dispatch:
   push:
@@ -31,7 +30,7 @@ jobs:
         run: npm ci
 
       - name: Build installer
-        run: npm run dist
+        run: npm run dist -- --publish never
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
