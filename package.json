@@ -4,7 +4,10 @@
   "version": "1.0.0",
   "description": "一个把计划时间、实际专注和每日复盘放在一起的个人时间管理软件。",
   "main": "electron-main.js",
-  "author": "",
+  "author": {
+    "name": "ZYP6198",
+    "email": "zyp6198@users.noreply.github.com"
+  },
   "license": "MIT",
   "private": true,
   "engines": {
@@ -50,7 +53,10 @@
     },
     "linux": {
       "target": ["AppImage", "deb"],
-      "category": "Utility"
+      "category": "Utility",
+      "desktop": {
+        "Name": "今日"
+      }
     }
   }
 }
