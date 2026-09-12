@@ -1,7 +1,7 @@
 {
   "name": "jinri-time-manager",
   "productName": "今日",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "一个把计划时间、实际专注和每日复盘放在一起的个人时间管理软件。",
   "main": "electron-main.js",
   "author": {
@@ -19,9 +19,14 @@
     "dist": "electron-builder",
     "dist:mac": "electron-builder --mac",
     "dist:win": "electron-builder --win",
-    "dist:linux": "electron-builder --linux"
+    "dist:linux": "electron-builder --linux",
+    "mobile:prepare": "node scripts/sync-mobile.cjs",
+    "mobile:sync": "npm run mobile:prepare && npx cap sync",
+    "mobile:android": "npm run mobile:sync && cd android && ./gradlew assembleDebug",
+    "mobile:ios": "npm run mobile:sync && npx cap open ios"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "electron": "^37.0.0",
     "electron-builder": "^26.0.12"
   },
@@ -45,15 +50,29 @@
     },
     "mac": {
       "category": "public.app-category.productivity",
-      "target": ["dmg", "zip"]
+      "target": [
+        "dmg",
+        "zip"
+      ]
     },
     "win": {
-      "target": ["nsis", "portable"],
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "artifactName": "今日-${version}-Windows-${arch}.${ext}"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "category": "Utility"
     }
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2"
   }
 }
