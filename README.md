@@ -2,6 +2,13 @@
 
 这是根据《个人时间管理微信小程序 PRD V1.0》制作的第一版跨平台桌面软件。它不依赖微信，也不需要登录服务器，适合先自己使用或放到 GitHub 给朋友下载。
 
+## 最新更新（v1.1.1）
+
+- 修复延期任务从今天消失的问题：延期不再改写原计划日期，今天的任务和专注记录会继续保留。
+- 延期任务支持“撤回延期”；升级时会自动迁移旧版本已经移到明天的延期任务。
+- 移除主界面的“今日提示”，让今日页面更聚焦于任务和数据。
+- 保持原有本地存储键不变，不会因为升级清空已有数据。
+
 ## 已实现
 
 - 今日任务：快速添加、新建/编辑、分类、优先级、计划时段、Top 3
@@ -12,6 +19,7 @@
 - 我的：每日复盘、分类管理、JSON 数据导出、恢复演示数据
 - 数据：Electron 本地存储持久化，当前不依赖服务器
 - 手机：支持 PWA，可添加到 iPhone / 安卓主屏幕，并支持离线打开
+- 原生手机 App：已加入 Capacitor Android / iOS 工程，不依赖微信小程序
 
 ## 下载软件
 
@@ -22,6 +30,18 @@
 - Linux：`.AppImage` 或 `.deb`
 
 如果只想在手机上使用，可以把仓库发布到 GitHub Pages，用手机浏览器打开页面后选择“添加到主屏幕”（iPhone 在 Safari 的分享菜单中操作），之后会像普通 App 一样从主屏幕打开。
+
+## 直接安装手机 App
+
+- Android：GitHub Releases 会提供 `.apk`，允许安装未知来源后可以直接安装，不需要上架应用商店。
+- iPhone：仓库包含 `ios/` 原生工程。iPhone 的安装包必须经过 Apple 签名，可用 Xcode 直接安装到自己的手机，或用 TestFlight；不需要公开上架 App Store，但不能直接安装未签名的 IPA。
+
+原生工程使用 Capacitor 生成，移动端资源由 `npm run mobile:prepare` 同步到 `www/`。开发机需要 Node.js 22.12 或更高版本；Android 需要 Android Studio，iPhone 需要 Xcode。
+
+```bash
+npm run mobile:android
+npm run mobile:ios
+```
 
 仓库里的 `pages.yml` 已经配置好自动发布：把项目推送到 `main` 分支后，在 GitHub 的 Settings → Pages 中选择 GitHub Actions，之后每次更新都会自动发布手机版本。
 
