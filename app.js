@@ -59,10 +59,45 @@ function initialState() {
   };
 }
 
+function migratePostponedTasks(tasks) {
+  let changed = false;
+  const migrated = (Array.isArray(tasks) ? tasks : []).map((task) => {
+    if (task.status !== "postponed") return task;
+    const next = { ...task };
+    if (!next.previousStatus) {
+      next.previousStatus = "todo";
+      changed = true;
+    }
+    // 1.1.0 moved postponed tasks to tomorrow. Restore their original day
+    // once so today's history remains visible after upgrading.
+    if (next.originalDate && next.date && next.date !== next.originalDate && !next.postponedTo) {
+      next.postponedFrom = next.originalDate;
+      next.postponedTo = next.date;
+      next.date = next.originalDate;
+      changed = true;
+    }
+    if (next.originalDate) {
+      delete next.originalDate;
+      changed = true;
+    }
+    return next;
+  });
+  return { tasks: migrated, changed };
+}
+
 function loadState() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return { ...initialState(), ...JSON.parse(stored), isDemo: false };
+    if (stored) {
+      const next = { ...initialState(), ...JSON.parse(stored), isDemo: false };
+      const migration = migratePostponedTasks(next.tasks);
+      next.tasks = migration.tasks;
+      if (migration.changed) {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); }
+        catch (migrationError) { console.warn("延期任务迁移未能写回本地存储，当前数据仍会继续使用", migrationError); }
+      }
+      return next;
+    }
   } catch (error) { console.warn("无法读取本地数据", error); }
   return initialState();
 }
@@ -117,7 +152,6 @@ function renderToday() {
   $("#hero-copy").textContent = tasks.length ? (completed === tasks.length ? "太棒了，今天的清单已经全部收好。" : `还有 ${tasks.length - completed} 项，按自己的节奏来。`) : "把想做的事写下来，给今天一个方向。";
   $("#top3-count").textContent = `${top3Completed} / ${top3.length || 3}`;
   $("#task-count").textContent = tasks.length;
-  $("#insight-copy").textContent = running ? `你正在专注于「${running.title}」，先把这一件事做好。` : actual ? `今天已经专注 ${secondsToText(actual)}，每一段投入都算数。` : "把计划写下来，执行就有了方向。";
   $("#today-metrics").innerHTML = [
     metricCard("任务完成", `${completed}<span class="metric-suffix">/${tasks.length}</span>`, "今天的清单", "purple", "✓"),
     metricCard("专注时间", secondsToText(actual, true), planned ? `计划 ${secondsToText(planned, true)}` : "还没有计划时长", "green", "◒"),
@@ -202,13 +236,15 @@ function openEditTask(task) { resetTaskForm(); $("#task-modal-title").textConten
 function updateDurationPreview() { const start = $("#task-start").value; const end = $("#task-end").value; const minutes = timeToMinutes(end) - timeToMinutes(start); $("#duration-preview").innerHTML = `计划时长 <strong>${minutes > 0 ? minutesToText(minutes) : "—"}</strong>`; }
 function createOrUpdateTask(event) { event.preventDefault(); const id = $("#task-id").value; const title = $("#task-title").value.trim(); const date = $("#task-date").value || localDate(); const start = $("#task-start").value; const end = $("#task-end").value; if (start && end && timeToMinutes(end) <= timeToMinutes(start)) { showToast("结束时间需要晚于开始时间", "warning"); return; } if (!title) return; const data = { title, category: $("#task-category").value || "其他", date, plannedStart: start, plannedEnd: end, priority: $("#task-priority").value, isTop3: $("#task-top3").checked && date === localDate(), note: $("#task-note").value.trim() }; if (id) { const task = state.tasks.find((item) => item.id === id); if (task) Object.assign(task, data); showToast("任务已更新", "success"); } else { state.tasks.push({ id: uid("task"), ...data, status: "todo", sessions: [], createdAt: Date.now() }); showToast("任务已加入今天", "success"); } saveState(); closeModals(); renderAll(); }
 
-function completeTask(id) { const task = state.tasks.find((item) => item.id === id); if (!task) return; if (task.status === "running") stopRunningSession(task); task.status = "done"; task.completedAt = Date.now(); saveState(); renderAll(); showToast("做得好，任务完成了", "success"); }
-function startTask(id) { const task = state.tasks.find((item) => item.id === id); if (!task) return; const running = state.tasks.find((item) => item.status === "running" && item.id !== id); if (running) { pauseTask(running.id, false); showToast(`已暂停「${running.title}」，开始新的专注`, "warning"); } task.status = "running"; task.activeStartedAt = Date.now(); saveState(); renderAll(); }
+function clearPostponement(task) { delete task.previousStatus; delete task.postponedFrom; delete task.postponedTo; }
+function completeTask(id) { const task = state.tasks.find((item) => item.id === id); if (!task) return; if (task.status === "running") stopRunningSession(task); clearPostponement(task); task.status = "done"; task.completedAt = Date.now(); saveState(); renderAll(); showToast("做得好，任务完成了", "success"); }
+function startTask(id) { const task = state.tasks.find((item) => item.id === id); if (!task) return; const running = state.tasks.find((item) => item.status === "running" && item.id !== id); if (running) { pauseTask(running.id, false); showToast(`已暂停「${running.title}」，开始新的专注`, "warning"); } clearPostponement(task); task.status = "running"; task.activeStartedAt = Date.now(); saveState(); renderAll(); }
 function stopRunningSession(task) { if (task.activeStartedAt) { task.sessions = task.sessions || []; task.sessions.push({ start: task.activeStartedAt, end: Date.now() }); delete task.activeStartedAt; } }
 function pauseTask(id, notify = true) { const task = state.tasks.find((item) => item.id === id); if (!task) return; stopRunningSession(task); task.status = "paused"; saveState(); renderAll(); if (notify) showToast("计时已暂停"); }
-function postponeTask(id) { const task = state.tasks.find((item) => item.id === id); if (!task) return; if (task.status === "running") stopRunningSession(task); const tomorrow = new Date(parseDate(task.date)); tomorrow.setDate(tomorrow.getDate() + 1); task.date = localDate(tomorrow); task.status = "postponed"; task.originalDate = task.originalDate || localDate(); saveState(); closeModals(); renderAll(); showToast(`已延期到 ${dateLabel(task.date)}`, "success"); }
+function postponeTask(id) { const task = state.tasks.find((item) => item.id === id); if (!task) return; const previousStatus = task.status === "running" ? "paused" : task.status; if (task.status === "running") stopRunningSession(task); const tomorrow = new Date(parseDate(task.date)); tomorrow.setDate(tomorrow.getDate() + 1); task.previousStatus = ["todo", "paused"].includes(previousStatus) ? previousStatus : "todo"; task.postponedFrom = task.date; task.postponedTo = localDate(tomorrow); task.status = "postponed"; saveState(); closeModals(); renderAll(); showToast(`已延期到 ${dateLabel(task.postponedTo)}，今天的记录已保留`, "success"); }
+function restorePostponedTask(id) { const task = state.tasks.find((item) => item.id === id); if (!task || task.status !== "postponed") return; task.status = ["todo", "paused"].includes(task.previousStatus) ? task.previousStatus : "todo"; clearPostponement(task); saveState(); closeModals(); renderAll(); showToast("已撤回延期，任务回到原计划", "success"); }
 function deleteTask(id) { const task = state.tasks.find((item) => item.id === id); if (!task) return; if (!window.confirm(`确定删除「${task.title}」吗？`)) return; state.tasks = state.tasks.filter((item) => item.id !== id); saveState(); closeModals(); renderAll(); showToast("任务已删除"); }
-function openDetail(task) { const actual = getTaskActualSeconds(task); const planned = plannedSeconds(task); const canStart = ["todo", "paused", "postponed"].includes(task.status); $("#detail-modal").innerHTML = `<div class="detail-header"><div><span class="section-label">TASK DETAILS</span><h2 class="detail-title">${escapeHtml(task.title)}</h2><span class="detail-status ${task.status}">${statusText(task.status)}</span></div><button class="icon-button" data-close-modal aria-label="关闭">×</button></div><div class="detail-info-grid"><div class="detail-info"><span>计划日期</span><strong>${dateLabel(task.date, true)}</strong></div><div class="detail-info"><span>计划时间</span><strong>${formatTimeRange(task)}</strong></div><div class="detail-info"><span>计划时长</span><strong>${planned ? minutesToText(planned / 60) : "未设置"}</strong></div><div class="detail-info"><span>实际时长</span><strong>${actual ? secondsToText(actual) : "尚未记录"}</strong></div></div>${task.note ? `<div class="detail-note">${escapeHtml(task.note)}</div>` : ""}<div class="detail-actions">${canStart ? `<button class="button button-primary" data-action="start" data-id="${task.id}">${task.status === "paused" ? "继续计时" : "开始计时"}</button>` : task.status === "running" ? `<button class="button button-soft" data-action="pause" data-id="${task.id}">暂停</button>` : ""}${task.status !== "done" ? `<button class="button button-soft" data-action="complete" data-id="${task.id}">完成</button>` : ""}<button class="button button-soft" data-action="edit" data-id="${task.id}">编辑</button><button class="danger-button" data-action="delete" data-id="${task.id}">删除</button></div>${task.status !== "done" ? `<button class="text-button" style="margin-top:17px" data-action="postpone" data-id="${task.id}">延期到明天 →</button>` : ""}`; openModal($("#detail-modal")); }
+function openDetail(task) { const actual = getTaskActualSeconds(task); const planned = plannedSeconds(task); const canStart = ["todo", "paused", "postponed"].includes(task.status); const postponeInfo = task.status === "postponed" && task.postponedTo ? `<div class="detail-note">已延期到 ${dateLabel(task.postponedTo, true)}，原计划日期和专注记录已保留。</div>` : ""; $("#detail-modal").innerHTML = `<div class="detail-header"><div><span class="section-label">TASK DETAILS</span><h2 class="detail-title">${escapeHtml(task.title)}</h2><span class="detail-status ${task.status}">${statusText(task.status)}</span></div><button class="icon-button" data-close-modal aria-label="关闭">×</button></div><div class="detail-info-grid"><div class="detail-info"><span>计划日期</span><strong>${dateLabel(task.date, true)}</strong></div><div class="detail-info"><span>计划时间</span><strong>${formatTimeRange(task)}</strong></div><div class="detail-info"><span>计划时长</span><strong>${planned ? minutesToText(planned / 60) : "未设置"}</strong></div><div class="detail-info"><span>实际时长</span><strong>${actual ? secondsToText(actual) : "尚未记录"}</strong></div></div>${postponeInfo}${task.note ? `<div class="detail-note">${escapeHtml(task.note)}</div>` : ""}<div class="detail-actions">${canStart ? `<button class="button button-primary" data-action="start" data-id="${task.id}">${task.status === "paused" ? "继续计时" : "开始计时"}</button>` : task.status === "running" ? `<button class="button button-soft" data-action="pause" data-id="${task.id}">暂停</button>` : ""}${task.status !== "done" ? `<button class="button button-soft" data-action="complete" data-id="${task.id}">完成</button>` : ""}<button class="button button-soft" data-action="edit" data-id="${task.id}">编辑</button><button class="danger-button" data-action="delete" data-id="${task.id}">删除</button></div>${task.status === "postponed" ? `<button class="text-button" style="margin-top:17px" data-action="restore-postponed" data-id="${task.id}">撤回延期 ↶</button>` : task.status !== "done" ? `<button class="text-button" style="margin-top:17px" data-action="postpone" data-id="${task.id}">延期到明天 →</button>` : ""}`; openModal($("#detail-modal")); }
 
 function showToast(message, type = "") { const toast = $("#toast"); toast.textContent = message; toast.className = `toast ${type}`; clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.add("hidden"), 2600); }
 function switchView(view) { currentView = view; renderShell(); if (view === "today") renderToday(); if (view === "calendar") renderCalendar(); if (view === "stats") renderStats(); if (view === "profile") renderProfile(); }
@@ -217,14 +253,15 @@ function resetData() { if (!window.confirm("确定清空当前记录并恢复演
 function saveReview() { const today = localDate(); state.reviews[today] = { score: reviewScore, goodThing: $("#review-good").value.trim(), waste: $("#review-waste").value.trim(), updatedAt: Date.now() }; saveState(); showToast("今日复盘已保存", "success"); }
 function addCategory() { const name = window.prompt("输入新的任务分类"); if (!name) return; const trimmed = name.trim(); if (!trimmed) return; if (state.categories.includes(trimmed)) { showToast("这个分类已经存在", "warning"); return; } state.categories.push(trimmed); saveState(); renderAll(); showToast("分类已添加", "success"); }
 function removeCategory(name) { if (state.tasks.some((task) => task.category === name)) { showToast("已有任务使用这个分类，暂时不能删除", "warning"); return; } state.categories = state.categories.filter((category) => category !== name); saveState(); renderAll(); showToast("分类已删除"); }
-function updateInstallRow() { const row = $("#install-app"); if (!row) return; const installed = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true; const title = row.querySelector("strong"); const copy = row.querySelector("small"); if (installed) { title.textContent = "已安装到主屏幕"; copy.textContent = "从手机主屏幕直接打开"; row.classList.add("disabled"); } else { title.textContent = "安装到手机"; copy.textContent = deferredInstallPrompt ? "添加到主屏幕，像 App 一样使用" : "浏览器菜单中选择“添加到主屏幕”"; row.classList.remove("disabled"); } }
+function isNativeApp() { const platform = window.Capacitor?.getPlatform?.(); return Boolean(window.Capacitor?.isNativePlatform?.() || (platform && platform !== "web")); }
+function updateInstallRow() { const row = $("#install-app"); if (!row) return; if (isNativeApp()) { row.classList.add("native-hidden"); return; } const installed = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true; const title = row.querySelector("strong"); const copy = row.querySelector("small"); if (installed) { title.textContent = "已安装到主屏幕"; copy.textContent = "从手机主屏幕直接打开"; row.classList.add("disabled"); } else { title.textContent = "安装到手机"; copy.textContent = deferredInstallPrompt ? "添加到主屏幕，像 App 一样使用" : "浏览器菜单中选择“添加到主屏幕”"; row.classList.remove("disabled"); } }
 async function installApp() { if (window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true) { showToast("已经安装在主屏幕了", "success"); return; } if (!deferredInstallPrompt) { showToast("请在浏览器菜单中选择“添加到主屏幕”", "warning"); return; } deferredInstallPrompt.prompt(); const choice = await deferredInstallPrompt.userChoice; if (choice.outcome === "accepted") showToast("已添加到主屏幕", "success"); deferredInstallPrompt = null; updateInstallRow(); }
 
 document.addEventListener("click", (event) => {
   const nav = event.target.closest("[data-view]"); if (nav) { switchView(nav.dataset.view); return; }
   const filter = event.target.closest("[data-filter]"); if (filter) { taskFilter = filter.dataset.filter; $$(".filter-tab").forEach((tab) => tab.classList.toggle("active", tab === filter)); renderToday(); return; }
   const period = event.target.closest("[data-period]"); if (period) { statsPeriod = period.dataset.period; renderStats(); return; }
-  const action = event.target.closest("[data-action]"); if (action) { const task = state.tasks.find((item) => item.id === action.dataset.id); if (!task) return; const kind = action.dataset.action; if (kind === "start") startTask(task.id); if (kind === "pause") pauseTask(task.id); if (kind === "complete") completeTask(task.id); if (kind === "detail") openDetail(task); if (kind === "edit") { closeModals(); openEditTask(task); } if (kind === "postpone") postponeTask(task.id); if (kind === "delete") deleteTask(task.id); return; }
+  const action = event.target.closest("[data-action]"); if (action) { const task = state.tasks.find((item) => item.id === action.dataset.id); if (!task) return; const kind = action.dataset.action; if (kind === "start") startTask(task.id); if (kind === "pause") pauseTask(task.id); if (kind === "complete") completeTask(task.id); if (kind === "detail") openDetail(task); if (kind === "edit") { closeModals(); openEditTask(task); } if (kind === "postpone") postponeTask(task.id); if (kind === "restore-postponed") restorePostponedTask(task.id); if (kind === "delete") deleteTask(task.id); return; }
   const calendarDay = event.target.closest("[data-calendar-date]"); if (calendarDay) { calendarSelected = calendarDay.dataset.calendarDate; renderCalendar(); return; }
   const score = event.target.closest("[data-score]"); if (score) { reviewScore = Number(score.dataset.score); renderScorePicker(); return; }
   const categoryRemove = event.target.closest("[data-remove-category]"); if (categoryRemove) { removeCategory(categoryRemove.dataset.removeCategory); return; }
@@ -236,6 +273,7 @@ $("#open-add-task").addEventListener("click", () => openAddTask()); $("#empty-ad
 window.addEventListener("beforeinstallprompt", (event) => { event.preventDefault(); deferredInstallPrompt = event; updateInstallRow(); });
 window.addEventListener("appinstalled", () => { deferredInstallPrompt = null; updateInstallRow(); showToast("今日已安装到主屏幕", "success"); });
 if ("serviceWorker" in navigator && (window.location.protocol === "http:" || window.location.protocol === "https:")) navigator.serviceWorker.register("./sw.js").catch((error) => console.warn("离线缓存注册失败", error));
+if (isNativeApp()) document.documentElement.classList.add("native-app");
 
 setInterval(() => { if (state.tasks.some((task) => task.status === "running")) { renderToday(); if (currentView === "stats") renderStats(); if (currentView === "calendar") renderDayDetail(); } }, 1000);
 renderAll();
